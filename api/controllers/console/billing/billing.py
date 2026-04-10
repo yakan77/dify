@@ -1,8 +1,9 @@
 import base64
+from typing import Literal
 
 from flask import request
 from flask_restx import Resource, fields
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field
 from werkzeug.exceptions import BadRequest
 
 from controllers.console import console_ns
@@ -15,22 +16,8 @@ DEFAULT_REF_TEMPLATE_SWAGGER_2_0 = "#/definitions/{model}"
 
 
 class SubscriptionQuery(BaseModel):
-    plan: str = Field(..., description="Subscription plan")
-    interval: str = Field(..., description="Billing interval")
-
-    @field_validator("plan")
-    @classmethod
-    def validate_plan(cls, value: str) -> str:
-        if value not in [CloudPlan.PROFESSIONAL, CloudPlan.TEAM]:
-            raise ValueError("Invalid plan")
-        return value
-
-    @field_validator("interval")
-    @classmethod
-    def validate_interval(cls, value: str) -> str:
-        if value not in {"month", "year"}:
-            raise ValueError("Invalid interval")
-        return value
+    plan: Literal[CloudPlan.PROFESSIONAL, CloudPlan.TEAM] = Field(..., description="Subscription plan")
+    interval: Literal["month", "year"] = Field(..., description="Billing interval")
 
 
 class PartnerTenantsPayload(BaseModel):
@@ -49,7 +36,7 @@ class Subscription(Resource):
     @only_edition_cloud
     def get(self):
         current_user, current_tenant_id = current_account_with_tenant()
-        args = SubscriptionQuery.model_validate(request.args.to_dict(flat=True))  # type: ignore
+        args = SubscriptionQuery.model_validate(request.args.to_dict(flat=True))
         BillingService.is_tenant_owner_or_admin(current_user)
         return BillingService.get_subscription(args.plan, args.interval, current_user.email, current_tenant_id)
 

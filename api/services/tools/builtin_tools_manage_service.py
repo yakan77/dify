@@ -5,14 +5,13 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy import exists, select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from configs import dify_config
 from constants import HIDDEN_VALUE, UNKNOWN_VALUE
 from core.helper.name_generator import generate_incremental_name
 from core.helper.position_helper import is_filtered
 from core.helper.provider_cache import NoOpProviderCredentialCache, ToolProviderCredentialsCache
-from core.helper.tool_provider_cache import ToolProviderListCache
 from core.plugin.entities.plugin_daemon import CredentialType
 from core.tools.builtin_tool.provider import BuiltinToolProviderController
 from core.tools.builtin_tool.providers._positions import BuiltinToolProviderSort
@@ -47,13 +46,12 @@ class BuiltinToolManageService:
         delete custom oauth client params
         """
         tool_provider = ToolProviderID(provider)
-        with Session(db.engine) as session:
+        with sessionmaker(bind=db.engine).begin() as session:
             session.query(ToolOAuthTenantClient).filter_by(
                 tenant_id=tenant_id,
                 provider=tool_provider.provider_name,
                 plugin_id=tool_provider.plugin_id,
             ).delete()
-            session.commit()
         return {"result": "success"}
 
     @staticmethod
@@ -151,7 +149,7 @@ class BuiltinToolManageService:
         """
         update builtin tool provider
         """
-        with Session(db.engine) as session:
+        with sessionmaker(bind=db.engine).begin() as session:
             # get if the provider exists
             db_provider = (
                 session.query(BuiltinToolProvider)
@@ -204,12 +202,7 @@ class BuiltinToolManageService:
 
                     db_provider.name = name
 
-                session.commit()
-
-                # Invalidate tool providers cache
-                ToolProviderListCache.invalidate_cache(tenant_id)
             except Exception as e:
-                session.rollback()
                 raise ValueError(str(e))
         return {"result": "success"}
 
@@ -226,7 +219,7 @@ class BuiltinToolManageService:
         """
         add builtin tool provider
         """
-        with Session(db.engine) as session:
+        with sessionmaker(bind=db.engine).begin() as session:
             try:
                 lock = f"builtin_tool_provider_create_lock:{tenant_id}_{provider}"
                 with redis_client.lock(lock, timeout=20):
@@ -279,19 +272,15 @@ class BuiltinToolManageService:
                         user_id=user_id,
                         provider=provider,
                         encrypted_credentials=json.dumps(encrypter.encrypt(credentials)),
-                        credential_type=api_type.value,
+                        credential_type=api_type,
                         name=name,
                         expires_at=expires_at if expires_at is not None else -1,
                     )
 
                     session.add(db_provider)
-                    session.commit()
-
-                    # Invalidate tool providers cache
-                    ToolProviderListCache.invalidate_cache(tenant_id)
             except Exception as e:
-                session.rollback()
                 raise ValueError(str(e))
+
         return {"result": "success"}
 
     @staticmethod
@@ -320,7 +309,7 @@ class BuiltinToolManageService:
             .filter_by(
                 tenant_id=tenant_id,
                 provider=provider,
-                credential_type=credential_type.value,
+                credential_type=credential_type,
             )
             .order_by(BuiltinToolProvider.created_at.desc())
             .all()
@@ -338,12 +327,11 @@ class BuiltinToolManageService:
         get builtin tool provider credentials
         """
         with db.session.no_autoflush:
-            providers = (
-                db.session.query(BuiltinToolProvider)
-                .filter_by(tenant_id=tenant_id, provider=provider_name)
+            providers = db.session.scalars(
+                select(BuiltinToolProvider)
+                .where(BuiltinToolProvider.tenant_id == tenant_id, BuiltinToolProvider.provider == provider_name)
                 .order_by(BuiltinToolProvider.is_default.desc(), BuiltinToolProvider.created_at.asc())
-                .all()
-            )
+            ).all()
 
             if len(providers) == 0:
                 return []
@@ -386,7 +374,7 @@ class BuiltinToolManageService:
         """
         delete tool provider
         """
-        with Session(db.engine) as session:
+        with sessionmaker(bind=db.engine).begin() as session:
             db_provider = (
                 session.query(BuiltinToolProvider)
                 .where(
@@ -400,7 +388,6 @@ class BuiltinToolManageService:
                 raise ValueError(f"you have not added provider {provider}")
 
             session.delete(db_provider)
-            session.commit()
 
             # delete cache
             provider_controller = ToolManager.get_builtin_provider(provider, tenant_id)
@@ -409,9 +396,6 @@ class BuiltinToolManageService:
             )
             cache.delete()
 
-            # Invalidate tool providers cache
-            ToolProviderListCache.invalidate_cache(tenant_id)
-
         return {"result": "success"}
 
     @staticmethod
@@ -419,9 +403,9 @@ class BuiltinToolManageService:
         """
         set default provider
         """
-        with Session(db.engine) as session:
+        with sessionmaker(bind=db.engine).begin() as session:
             # get provider
-            target_provider = session.query(BuiltinToolProvider).filter_by(id=id).first()
+            target_provider = session.query(BuiltinToolProvider).filter_by(id=id, tenant_id=tenant_id).first()
             if target_provider is None:
                 raise ValueError("provider not found")
 
@@ -432,10 +416,7 @@ class BuiltinToolManageService:
 
             # set new default provider
             target_provider.is_default = True
-            session.commit()
 
-            # Invalidate tool providers cache
-            ToolProviderListCache.invalidate_cache(tenant_id)
         return {"result": "success"}
 
     @staticmethod
@@ -666,7 +647,7 @@ class BuiltinToolManageService:
         if not isinstance(provider_controller, (BuiltinToolProviderController, PluginToolProviderController)):
             raise ValueError(f"Provider {provider} is not a builtin or plugin provider")
 
-        with Session(db.engine) as session:
+        with sessionmaker(bind=db.engine).begin() as session:
             custom_client_params = (
                 session.query(ToolOAuthTenantClient)
                 .filter_by(
@@ -702,7 +683,6 @@ class BuiltinToolManageService:
             if enable_oauth_custom_client is not None:
                 custom_client_params.enabled = enable_oauth_custom_client
 
-            session.commit()
         return {"result": "success"}
 
     @staticmethod
