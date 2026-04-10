@@ -20,20 +20,23 @@ export default function TransitionSection() {
       {/* Purple accent sweep */}
       <svg
         className="absolute inset-0 w-full h-full pointer-events-none"
+        viewBox="0 0 100 100"
         preserveAspectRatio="none"
         aria-hidden="true"
       >
         <path
-          d="M -5% 80% Q 30% 50%, 65% 55% T 105% 25%"
+          d="M-5 80 Q 30 50, 65 55 T 105 25"
           fill="none"
           stroke="rgba(123, 94, 167, 0.25)"
-          strokeWidth="1.5"
+          strokeWidth="0.5"
+          vectorEffect="non-scaling-stroke"
         />
         <path
-          d="M -5% 95% Q 40% 60%, 70% 65% T 105% 40%"
+          d="M-5 95 Q 40 60, 70 65 T 105 40"
           fill="none"
           stroke="rgba(106, 191, 94, 0.12)"
-          strokeWidth="1"
+          strokeWidth="0.4"
+          vectorEffect="non-scaling-stroke"
         />
       </svg>
 
