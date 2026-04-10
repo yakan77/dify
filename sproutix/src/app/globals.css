@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-light: #d4d8df;
+  --bg-dark: #0a0a0a;
+  --text-primary: #ffffff;
+  --text-dark: #1a1a2e;
+  --text-muted: #8a8a9a;
+  --accent-purple: #7b5ea7;
+  --accent-green: #6abf5e;
+  --nav-pill-bg: rgba(255, 255, 255, 0.12);
+  --cta-bg: #ffffff;
+  --cta-text: #1a1a2e;
+  --line-decorative: rgba(255, 255, 255, 0.15);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background: #111111;
+  font-family: var(--font-inter), Inter, system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* ------------------------------------
+   Entrance animations
+------------------------------------ */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.8); }
+  70%  { transform: scale(1.05); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes driftH {
+  0%, 100% { transform: translateX(0); }
+  50%       { transform: translateX(12px); }
+}
+
+/* Utility classes */
+.animate-fade-in-up {
+  animation: fadeInUp 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-fade-in {
+  animation: fadeIn 1s ease both;
+}
+
+.animate-pop-in {
+  animation: popIn 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* ------------------------------------
+   Intersection-triggered reveals
+   (add .is-visible via JS)
+------------------------------------ */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.7s ease, transform 0.7s ease;
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* ------------------------------------
+   Glassmorphism nav pill
+------------------------------------ */
+.nav-pill {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-pill-dark {
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* ------------------------------------
+   Purple glow utilities
+------------------------------------ */
+.glow-purple {
+  box-shadow: 0 0 32px rgba(123, 94, 167, 0.35), 0 0 80px rgba(123, 94, 167, 0.12);
+}
+
+.text-glow-purple {
+  text-shadow: 0 0 30px rgba(150, 120, 201, 0.5);
+}
